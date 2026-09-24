@@ -14,6 +14,10 @@ namespace Utilities.Services {
 		private static readonly Encoding _cp949 = Encoding.GetEncoding(949);
 		private static readonly Encoding _latin1 = Encoding.GetEncoding(28591);
 		private static readonly Encoding _western = Encoding.GetEncoding(1252);
+		private static readonly string[] _onset = { "g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h" };
+		private static readonly string[] _vowel = { "a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i" };
+		private static readonly string[] _coda = { "", "k", "k", "k", "n", "n", "n", "t", "l", "k", "m", "l", "l", "l", "p", "l", "m", "p", "p", "t", "t", "ng", "t", "t", "k", "t", "p", "t" };
+		private static readonly string[] _carry = { "", "g", "kk", "ks", "n", "nj", "nh", "d", "r", "lg", "lm", "lb", "ls", "lt", "lp", "lh", "m", "b", "bs", "s", "ss", "ng", "j", "ch", "k", "t", "p", "h" };
 		private static readonly Dictionary<string, string> _words = new Dictionary<string, string>(StringComparer.Ordinal);
 		private static readonly ConcurrentDictionary<string, Info> _cache = new ConcurrentDictionary<string, Info>(StringComparer.Ordinal);
 		private static int _maxLen = 1;
@@ -147,7 +151,10 @@ namespace Utilities.Services {
 				described.Append("English: ");
 				described.Append(english);
 			}
-			info.English = anyEnglish ? english.ToString() : null;
+			string rendered = english.ToString();
+			if (ContainsHangulScript(rendered))
+				rendered = RomanizeEmbedded(rendered);
+			info.English = anyEnglish ? rendered : null;
 			info.Describe = described.Length == 0 ? null : described.ToString();
 			info.HasHigh = anyHex;
 			info.Hex = hex.ToString();
@@ -205,7 +212,6 @@ namespace Utilities.Services {
 				return exact;
 
 			var sb = new StringBuilder();
-			bool any = false;
 			int i = 0;
 			while (i < hangul.Length) {
 				if (!IsSyllable(hangul[i])) {
@@ -224,20 +230,25 @@ namespace Utilities.Services {
 
 				string gloss;
 				int end = MatchWord(hangul, i, out gloss);
-				if (sb.Length > 0)
-					sb.Append(' ');
 				if (end == i) {
-					sb.Append(hangul[i]);
-					i++;
+					int j = i + 1;
+					while (j < hangul.Length && IsSyllable(hangul[j]) && MatchWord(hangul, j, out gloss) == j)
+						j++;
+					if (sb.Length > 0)
+						sb.Append(' ');
+					sb.Append(RomanizeSpan(hangul, i, j));
+					i = j;
 					continue;
 				}
 
-				any = true;
+				if (sb.Length > 0)
+					sb.Append(' ');
 				sb.Append(gloss);
 				i = end;
 			}
 
-			return any ? sb.ToString() : null;
+			string rendered = sb.ToString();
+			return ContainsHangulScript(rendered) ? RomanizeEmbedded(rendered) : rendered;
 		}
 
 		private static int MatchWord(string hangul, int i, out string gloss) {
@@ -249,7 +260,7 @@ namespace Utilities.Services {
 				compact.Append(hangul[p]);
 				p++;
 				string found;
-				if (_words.TryGetValue(compact.ToString(), out found)) {
+				if (compact.Length >= 2 && _words.TryGetValue(compact.ToString(), out found)) {
 					gloss = found;
 					bestEnd = p;
 				}
@@ -266,6 +277,109 @@ namespace Utilities.Services {
 
 		private static bool IsSyllable(char c) {
 			return c >= 0xAC00 && c <= 0xD7A3;
+		}
+
+		private static bool ContainsHangulScript(string text) {
+			for (int i = 0; i < text.Length; i++) {
+				char c = text[i];
+				if (IsSyllable(c) || (c >= 0x1100 && c <= 0x11FF) || (c >= 0x3130 && c <= 0x318F))
+					return true;
+			}
+			return false;
+		}
+
+		private static string RomanizeEmbedded(string text) {
+			var sb = new StringBuilder(text.Length);
+			int i = 0;
+			while (i < text.Length) {
+				if (!IsSyllable(text[i])) {
+					sb.Append(RomanizeJamo(text[i]));
+					i++;
+					continue;
+				}
+
+				int j = i + 1;
+				while (j < text.Length && IsSyllable(text[j]))
+					j++;
+				sb.Append(RomanizeSpan(text, i, j));
+				i = j;
+			}
+			return sb.ToString();
+		}
+
+		private static string RomanizeSpan(string text, int start, int end) {
+			var sb = new StringBuilder();
+			string carried = null;
+			int prevFinal = 0;
+			for (int i = start; i < end; i++) {
+				if (!IsSyllable(text[i]))
+					continue;
+
+				int code = text[i] - 0xAC00;
+				int onset = code / 588;
+				int vowel = (code % 588) / 28;
+				int final = code % 28;
+				bool vowelNext = i + 1 < end && IsSyllable(text[i + 1]) && (text[i + 1] - 0xAC00) / 588 == 11;
+
+				if (carried != null) {
+					sb.Append(carried);
+					carried = null;
+				}
+				else if (onset == 5 && (prevFinal == 4 || prevFinal == 8))
+					sb.Append("l");
+				else
+					sb.Append(_onset[onset]);
+
+				sb.Append(_vowel[vowel]);
+				if (final != 0 && vowelNext)
+					carried = _carry[final];
+				else
+					sb.Append(_coda[final]);
+				prevFinal = final;
+			}
+
+			if (carried != null)
+				sb.Append(carried);
+			return sb.ToString();
+		}
+
+		private static string RomanizeJamo(char c) {
+			if (c < 0x3131 || c > 0x3163)
+				return (c >= 0x1100 && c <= 0x11FF) || (c >= 0x3130 && c <= 0x318F) ? "" : c.ToString();
+
+			switch (c) {
+				case '\u3131': return "g";
+				case '\u3132': return "kk";
+				case '\u3134': return "n";
+				case '\u3137': return "d";
+				case '\u3138': return "tt";
+				case '\u3139': return "r";
+				case '\u3141': return "m";
+				case '\u3142': return "b";
+				case '\u3143': return "pp";
+				case '\u3145': return "s";
+				case '\u3146': return "ss";
+				case '\u3147': return "ng";
+				case '\u3148': return "j";
+				case '\u3149': return "jj";
+				case '\u314A': return "ch";
+				case '\u314B': return "k";
+				case '\u314C': return "t";
+				case '\u314D': return "p";
+				case '\u314E': return "h";
+				case '\u314F': return "a";
+				case '\u3150': return "ae";
+				case '\u3151': return "ya";
+				case '\u3153': return "eo";
+				case '\u3154': return "e";
+				case '\u3155': return "yeo";
+				case '\u3157': return "o";
+				case '\u315C': return "u";
+				case '\u3160': return "yu";
+				case '\u3161': return "eu";
+				case '\u3163': return "i";
+				default: return "";
+			}
 		}
 
 		private static byte[] BytesOf(string text) {

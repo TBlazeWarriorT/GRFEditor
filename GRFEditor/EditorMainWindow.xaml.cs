@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -112,6 +113,10 @@ namespace GRFEditor {
 			}
 		}
 
+		private void _splitterFolders_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+			Configuration.ConfigAsker["[GrfEditor - Folder list width]"] = _colFolders.ActualWidth.ToString(CultureInfo.InvariantCulture);
+		}
+
 		private void _loadEditorUI() {
 			_asyncOperation = new AsyncOperation(_progressBarComponent);
 			_recentFilesManager = new WpfRecentFiles(Configuration.ConfigAsker, 6, _menuItemRecentFiles, "GRFEditor");
@@ -119,6 +124,9 @@ namespace GRFEditor {
 			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 
 			_treeViewPathManager = new TreeViewPathManager(_treeView);
+			double folderWidth;
+			if (double.TryParse(Configuration.ConfigAsker["[GrfEditor - Folder list width]", ""], NumberStyles.Float, CultureInfo.InvariantCulture, out folderWidth) && folderWidth >= 80)
+				_colFolders.Width = new GridLength(folderWidth);
 			_items.ItemsSource = _itemEntries;
 			_listBoxResults.ItemsSource = _itemSearchEntries;
 			_recentFilesManager.FileClicked += _recentFilesManager_FileClicked;
