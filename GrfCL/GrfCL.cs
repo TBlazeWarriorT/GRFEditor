@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using ErrorManager;
 using GRF.Core;
@@ -10,6 +11,7 @@ using GRF.Image;
 using GRF.GrfSystem;
 using GRF.Threading;
 using GrfToWpfBridge.Application;
+using Utilities;
 using Utilities.CommandLine;
 using Utilities.Services;
 
@@ -142,6 +144,15 @@ namespace GrfCL {
 				Thread.Sleep(100);
 			}
 			CLHelper.ProgressEnded();
+		}
+
+		private static bool _matchesReading(string path, string query) {
+			if (query.IndexOf('*') >= 0 || query.IndexOf('?') >= 0) {
+				Regex regex = new Regex(Methods.WildcardToRegex(query), RegexOptions.IgnoreCase);
+				return KoreanReading.IsMatch(path, regex);
+			}
+
+			return KoreanReading.Contains(path, query);
 		}
 
 		private static void _showGrfTree(string grfPath, bool showFiles, SearchOption option) {

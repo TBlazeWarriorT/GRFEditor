@@ -144,6 +144,12 @@ namespace GrfCL {
 				Console.WriteLine(FileFormatParser.DisplayObjectProperties(_grf));
 				CLHelper.Log = "Object properties have been displayed";
 			}
+			else if (clOption == CommandLineOptions.Find) {
+				List<string> found = _grf.FileTable.Files.Where(path => clOption.Args.All(query => _matchesReading(path, query))).ToList();
+				foreach (string path in found)
+					Console.WriteLine(path);
+				CLHelper.Log = "Found " + found.Count + " file(s)";
+			}
 			else if (clOption == CommandLineOptions.FileInfo) {
 				Console.Write(FileFormatParser.DisplayObjectPropertiesFromEntry(_grf, _clOption.Args[0]));
 				CLHelper.Log = "Object properties have been displayed";
@@ -205,7 +211,7 @@ namespace GrfCL {
 				
 				if (clOption.Args[0].Contains("*") || clOption.Args[0].Contains("?")) {
 					Regex regex = new Regex(Methods.WildcardToRegex(clOption.Args[0]), RegexOptions.IgnoreCase);
-					filesToCopy = _grf.FileTable.Files.Where(p => regex.IsMatch(p)).ToList();
+					filesToCopy = _grf.FileTable.Files.Where(p => KoreanReading.IsMatch(p, regex)).ToList();
 				}
 				else {
 					filesToCopy = _grf.FileTable.Files.Where(p => p.IndexOf(clOption.Args[0], StringComparison.InvariantCulture) == 0).ToList();

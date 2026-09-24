@@ -198,6 +198,11 @@ namespace GrfCL {
 			"Path of the recent (newer) GRF.",
 			"Path of the resulting GRF."
 		);
+		public static readonly CommandLineOptions Find = new CommandLineOptions(
+			"find,search", "Finds files by their path, Hangul name or English reading.",
+			1, Int32.MaxValue, true,
+			"Words or wildcards to find. Every word must match (ex: apple spr)."
+		);
 		public static readonly CommandLineOptions Tree = new CommandLineOptions(
 			"tree,t", "Displays the structure of the GRF in a tree view mode.",
 			0, 3, true,
