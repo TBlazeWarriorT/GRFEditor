@@ -19,7 +19,7 @@ namespace GrfCL {
 			Console.WriteLine("//  Error level: " + errorLevel);
 			Console.WriteLine("//  Message: ");
 			Console.WriteLine(CLHelper.Indent(exception, 8, false));
-			Console.WriteLine("//" + CLHelper.Fill('_', Console.WindowWidth - 2));
+			Console.WriteLine("//" + CLHelper.Fill('_', CLHelper.WindowWidth - 2));
 
 			if (BreakOnExceptions)
 				GrfCL.Break();
@@ -39,7 +39,7 @@ namespace GrfCL {
 			Console.WriteLine("//  Message: ");
 			Console.WriteLine(CLHelper.Indent(exception, 8, false));
 			Console.WriteLine("//  Object responsible: " + caller);
-			Console.WriteLine("//" + CLHelper.Fill('_', Console.WindowWidth - 2));
+			Console.WriteLine("//" + CLHelper.Fill('_', CLHelper.WindowWidth - 2));
 
 			if (BreakOnExceptions)
 				GrfCL.Break();
@@ -53,7 +53,7 @@ namespace GrfCL {
 			Console.WriteLine("//  Caption: " + caption);
 			Console.WriteLine("//  Request: " + message);
 			Console.Write("//  Yes or no (Y | N) ? ");
-			Console.WriteLine("//" + CLHelper.Fill('_', Console.WindowWidth - 2));
+			Console.WriteLine("//" + CLHelper.Fill('_', CLHelper.WindowWidth - 2));
 			
 			string answer = Console.ReadLine();
 			

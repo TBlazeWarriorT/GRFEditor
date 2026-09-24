@@ -24,6 +24,15 @@ namespace GrfCL {
 			ImageConverterManager.AddConverter(new DefaultImageConverter());
 			Settings.CpuMonitoringEnabled = false;
 
+			// A pipe has no console code page. Write UTF-8 so paths survive redirection.
+			if (Console.IsOutputRedirected) {
+				Stream stdout = Console.OpenStandardOutput();
+				byte[] bom = new UTF8Encoding(true).GetPreamble();
+				stdout.Write(bom, 0, bom.Length);
+				Console.SetOut(new StreamWriter(stdout, new UTF8Encoding(false)) { AutoFlush = true });
+				Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
+			}
+
 			try {
 				string commandLine;
 
@@ -162,7 +171,8 @@ namespace GrfCL {
 				} while (!String.IsNullOrEmpty(temp));
 			}
 
-			Encoding enco = Console.OutputEncoding;
+			bool console = CLHelper.WindowWidth > 0;
+			Encoding enco = console ? Console.OutputEncoding : null;
 			folders = allFolders.Distinct().OrderBy(p => p).ToList();
 			try {
 				foreach (string folder in folders) {
@@ -177,7 +187,8 @@ namespace GrfCL {
 						List<string> tFiles = files.Where(p => Path.GetDirectoryName(p) == folder).ToList();
 						for (int index = 0; index < tFiles.Count; index++) {
 							string file = tFiles[index];
-							Console.OutputEncoding = Encoding.GetEncoding(1252);
+							if (console)
+								Console.OutputEncoding = Encoding.GetEncoding(1252);
 
 							Console.Write(CLHelper.Fill(' ', level));
 
@@ -190,14 +201,16 @@ namespace GrfCL {
 								Console.Write((char)196);
 							}
 
-							Console.OutputEncoding = enco;
+							if (console)
+								Console.OutputEncoding = enco;
 							Console.WriteLine(CLHelper.Indent(Path.GetFileName(file), level, true));
 						}
 					}
 				}
 			}
 			finally {
-				Console.OutputEncoding = enco;
+				if (console && enco != null)
+					Console.OutputEncoding = enco;
 			}
 		}
 
@@ -244,7 +257,8 @@ namespace GrfCL {
 			float cpuPerf;
 			int overMaxUsage = 0;
 			GrfThreadExtract thread;
-			Console.CursorVisible = false;
+			if (CLHelper.WindowWidth > 0)
+				Console.CursorVisible = false;
 			
 			while (threadsStreamCopy.Any(p => !p.Terminated)) {
 				Thread.Sleep(300);
@@ -288,12 +302,16 @@ namespace GrfCL {
 			}
 
 			CLHelper.ProgressEnded();
-			Console.CursorVisible = true;
+			if (CLHelper.WindowWidth > 0)
+				Console.CursorVisible = true;
 			
 			threadsStreamCopy.Clear();
 		}
 
 		internal static void Break() {
+			if (CLHelper.WindowWidth <= 0)
+				return;
+
 			Console.Write("#BREAK -- Press any key to continue...");
 
 			// Empty the input buffer

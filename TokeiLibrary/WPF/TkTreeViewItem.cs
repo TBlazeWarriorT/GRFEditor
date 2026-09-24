@@ -46,6 +46,8 @@ namespace TokeiLibrary.WPF {
 			var ttv = d as TkTreeViewItem;
 
 			if (ttv != null) {
+				ttv.ReadingText = KoreanReading.Describe(ttv.HeaderText);
+
 				if (Configuration.TranslateTreeView) {
 					var translation = TkTreeViewItem._translations[EncodingService.ConvertStringToKorean(ttv.HeaderText)];
 
@@ -68,6 +70,13 @@ namespace TokeiLibrary.WPF {
 		public string TranslatedText {
 			get { return (string)GetValue(TranslatedTextProperty); }
 			set { SetValue(TranslatedTextProperty, value); }
+		}
+
+		public static DependencyProperty ReadingTextProperty = DependencyProperty.Register("ReadingText", typeof(string), typeof(TkTreeViewItem), new PropertyMetadata(default(string)));
+
+		public string ReadingText {
+			get { return (string)GetValue(ReadingTextProperty); }
+			set { SetValue(ReadingTextProperty, value); }
 		}
 
 		protected TkView _internalParent;

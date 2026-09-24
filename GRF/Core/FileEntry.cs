@@ -195,6 +195,24 @@ namespace GRF.Core {
 			}
 		}
 
+		public string PathReading {
+			get { return KoreanReading.Describe(RelativePath); }
+		}
+
+		public string EnglishName {
+			get {
+				string english = KoreanReading.English(DisplayRelativePath);
+				return string.IsNullOrEmpty(english) ? "" : "  " + english;
+			}
+		}
+
+		public string EnglishPath {
+			get {
+				string english = KoreanReading.English(RelativePath);
+				return string.IsNullOrEmpty(english) ? "" : "  " + english;
+			}
+		}
+
 		public string FileType {
 			get {
 				var extension = RelativePath.GetExtension();

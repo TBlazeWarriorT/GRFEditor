@@ -165,6 +165,17 @@
     <MakeDir Directories="$(EmbeddedDllsPath)" />
     <Copy SourceFiles="@(GrfEditorDlls)" DestinationFolder="$(EmbeddedDllsPath)" SkipUnchangedFiles="true" Condition="Exists('$(GrfEditorDllsPath)')" />
   </Target>
+  <!-- Files\*.dll embedded above are snapshots. The exe directory is probed first, so ship the dlls this build just produced. -->
+  <Target Name="CopyFreshProjectDlls" AfterTargets="Build">
+    <ItemGroup>
+      <FreshDll Include="..\Utilities\bin\$(Configuration)\netstandard2.0\Utilities.dll" />
+      <FreshDll Include="..\GRF\bin\$(Configuration)\netstandard2.0\GRF.dll" />
+      <FreshDll Include="..\TokeiLibrary\bin\$(Configuration)\TokeiLibrary.dll" />
+      <FreshDll Include="..\ActImaging\bin\$(Configuration)\ActImaging.dll" />
+      <FreshDll Include="..\GrfToWpfBridge\bin\$(Configuration)\GrfToWpfBridge.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FreshDll)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
   <ProjectExtensions>
     <VisualStudio>
       <UserProperties BuildVersion_UpdateAssemblyVersion="True" BuildVersion_UpdateFileVersion="True" BuildVersion_BuildVersioningStyle="None.None.MonthStamp.Increment" />

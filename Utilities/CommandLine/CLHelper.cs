@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -23,8 +24,25 @@ namespace Utilities.CommandLine {
 			set { Console.WriteLine("#Exception: " + value); }
 		}
 
+		public static int WindowWidth {
+			get {
+				try {
+					if (Console.IsOutputRedirected)
+						return 0;
+
+					return Console.WindowWidth;
+				}
+				catch (IOException) {
+					return 0;
+				}
+			}
+		}
+
 		public static float Progress {
 			set {
+				if (WindowWidth <= 0)
+					return;
+
 				Console.SetCursorPosition(0, Console.CursorTop);
 				Console.Write("Progress: " + String.Format("{0:0.0} %   ", value < 0 ? 0 : value));
 			}
@@ -32,8 +50,14 @@ namespace Utilities.CommandLine {
 
 		public static string StringProgress {
 			set {
+				int width = WindowWidth;
+				if (width <= 0) {
+					Console.WriteLine("Progress: " + value);
+					return;
+				}
+
 				Console.SetCursorPosition(0, Console.CursorTop);
-				Console.Write("{0,-" + (Console.WindowWidth - 1) + "}", "Progress: " + value);
+				Console.Write("{0,-" + (width - 1) + "}", "Progress: " + value);
 			}
 		}
 
@@ -128,6 +152,11 @@ namespace Utilities.CommandLine {
 		}
 
 		public static void ProgressEnded() {
+			if (WindowWidth <= 0) {
+				Console.WriteLine("#Finished");
+				return;
+			}
+
 			Console.SetCursorPosition(0, Console.CursorTop);
 			Console.Write("#Finished         ");
 			Console.WriteLine();
@@ -136,10 +165,18 @@ namespace Utilities.CommandLine {
 		public static string Indent(string help, int indentLength, bool ignoreFirst = false, bool ignoreCutWords = false) {
 			bool originalValue = ignoreFirst;
 			string indent = Fill(' ', indentLength);
+			help = help ?? "";
+
+			int windowWidth = WindowWidth;
+			if (windowWidth <= 0) {
+				string[] parts = help.Replace("\r\n", "\n").Split('\n');
+				return string.Join("\n", parts.Select((part, index) => (index == 0 && ignoreFirst ? "" : indent) + part));
+			}
+
 			help = help.Replace("\r\n", " ").Replace("\n", " ").Replace("  ", " ");
 
 			List<string> lines = new List<string>();
-			int maxLineLength = Console.WindowWidth - indentLength;
+			int maxLineLength = windowWidth - indentLength;
 			int position = 0;
 			while (position < help.Length) {
 				string line = help.Substring(position, maxLineLength + position > help.Length ? help.Length - position : maxLineLength);
@@ -154,7 +191,7 @@ namespace Utilities.CommandLine {
 
 							position += line.Length;
 							line = line.TrimStart(' ');
-							line = line + Fill(' ', Console.WindowWidth - indent.Length - line.Length);
+							line = line + Fill(' ', windowWidth - indent.Length - line.Length);
 							lines.Add((ignoreFirst ? "" : indent) + line);
 							ignoreFirst = false;
 							continue;
@@ -163,7 +200,7 @@ namespace Utilities.CommandLine {
 				}
 
 				line = line.TrimStart(' ');
-				line = line + Fill(' ', Console.WindowWidth - indent.Length - line.Length);
+				line = line + Fill(' ', windowWidth - indent.Length - line.Length);
 				lines.Add((ignoreFirst ? "" : indent) + line);
 				ignoreFirst = false;
 				position += maxLineLength;

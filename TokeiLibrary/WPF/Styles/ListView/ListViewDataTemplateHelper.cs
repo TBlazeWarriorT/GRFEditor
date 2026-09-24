@@ -439,19 +439,29 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 				textBlock.Add(new XAttribute("ToolTip", toolTip));
 			}
 
+			XElement nameBlock = new XElement(ns + "TextBlock", textBlock);
+			XElement cell = nameBlock;
+			if (column != null && !string.IsNullOrEmpty(column.BesideExpression)) {
+				if (triggers == null || triggers.Count == 0)
+					nameBlock.Add(new XAttribute("Foreground", defaultBrushOverride ?? "{DynamicResource TextForeground}"));
+
+				cell = new XElement(ns + "StackPanel",
+					new XAttribute("Orientation", "Horizontal"),
+					nameBlock,
+					new XElement(ns + "TextBlock",
+						new XAttribute("Text", "{Binding Path=" + column.BesideExpression + "}"),
+						new XAttribute("FontStyle", "Italic"),
+						new XAttribute("Foreground", "Gray"),
+						new XAttribute("VerticalAlignment", "Center")));
+			}
+			else if (triggers == null || triggers.Count == 0) {
+				nameBlock.Add(new XAttribute("Foreground", defaultBrushOverride ?? "{DynamicResource TextForeground}"));
+			}
+
 			if (triggers == null || triggers.Count == 0)
-				xDataTemplate =
-				new XElement(ns + "DataTemplate",
-				             new XElement(ns + "TextBlock",
-										  textBlock,
-										  new XAttribute("Foreground", defaultBrushOverride ?? "{DynamicResource TextForeground}")));
+				xDataTemplate = new XElement(ns + "DataTemplate", cell);
 			else
-				xDataTemplate =
-				new XElement(ns + "DataTemplate",
-				             new XElement(ns + "TextBlock",
-										  textBlock),
-				             new XElement(ns + "DataTemplate.Triggers",
-										 bindings));
+				xDataTemplate = new XElement(ns + "DataTemplate", cell, new XElement(ns + "DataTemplate.Triggers", bindings));
 												
 			StringReader sr = new StringReader(xDataTemplate.ToString());
 			XmlReader xr = XmlReader.Create(sr);
@@ -486,6 +496,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 			public string SearchGetAccessor { get; set; }
 			public string DisplayExpression { get; set; }
 			public string ToolTipBinding { get; set; }
+			public string BesideExpression { get; set; }
 			public string Header { get; set; }
 			public bool IsFill { get; set; }
 			public TextAlignment TextAlignment { get; set; }

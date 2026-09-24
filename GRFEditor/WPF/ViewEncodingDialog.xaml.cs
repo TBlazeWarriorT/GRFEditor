@@ -93,6 +93,8 @@ namespace GRFEditor.WPF {
 				else {
 					_tbDest.Text = _encoding.GetString(enc.Encoding.GetBytes(_tbSource.Text));
 				}
+
+				_tbHex.Text = KoreanReading.Hex(_tbSource.Text);
 			}
 			catch (Exception err) {
 				ErrorHandler.HandleException(err);

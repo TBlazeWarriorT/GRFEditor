@@ -20,6 +20,7 @@ using TokeiLibrary.WPF;
 using TokeiLibrary.WPF.Styles.ListView;
 using Utilities;
 using Utilities.Extension;
+using Utilities.Services;
 
 namespace GRFEditor {
 	partial class EditorMainWindow : Window {
@@ -197,9 +198,9 @@ namespace GRFEditor {
 						int i;
 
 						for (i = 0; i < search.Count; i++) {
-							if (regexSearches[i] != null && !regexSearches[i].IsMatch(entries[k].FileName))
+							if (regexSearches[i] != null && !KoreanReading.IsMatch(entries[k].FileName, regexSearches[i]) && !KoreanReading.IsMatch(entries[k].RelativePath, regexSearches[i]))
 								break;
-							else if (entries[k].FileName.IndexOf(search[i], StringComparison.OrdinalIgnoreCase) == -1)
+							else if (regexSearches[i] == null && !KoreanReading.Contains(entries[k].FileName, search[i]) && !KoreanReading.Contains(entries[k].RelativePath, search[i]))
 								break;
 						}
 
@@ -291,17 +292,17 @@ namespace GRFEditor {
 							foreach (var query in search) {
 								if (query.Contains("*") || query.Contains("?")) {
 									Regex regex = new Regex(Methods.WildcardToRegex(query), RegexOptions.IgnoreCase);
-									res = res.Where(p => regex.IsMatch(p.Item2) || regex.IsMatch(p.Item3.RelativePath));
+									res = res.Where(p => KoreanReading.IsMatch(p.Item2, regex) || KoreanReading.IsMatch(p.Item3.RelativePath, regex));
 								}
 								else {
-									res = res.Where(p => p.Item3.RelativePath.IndexOf(query, StringComparison.OrdinalIgnoreCase) != -1);
+									res = res.Where(p => KoreanReading.Contains(p.Item3.RelativePath, query));
 								}
 							}
 
 							result = res.Select(p => p.Item3).ToList();
 						}
 						else {
-							var res = entries.Where(p => search.All(q => p.Key.IndexOf(q, StringComparison.OrdinalIgnoreCase) != -1)).Select(p => p.Value).ToList();
+							var res = entries.Where(p => search.All(q => KoreanReading.Contains(p.Key, q))).Select(p => p.Value).ToList();
 
 							if (res.Count < 10000) {
 								_grfSearchEntrySorter.UseAlphaNum = true;

@@ -27,16 +27,37 @@ namespace GRF.FileFormats {
 		}
 
 		public static string DisplayObjectPropertiesFromEntry(FileEntry entry) {
-			StringBuilder builder = new StringBuilder();
-			builder.AppendLine(DisplayObjectProperties(entry));
-			string toRet = builder.ToString();
+			string toRet = DisplayObjectProperties(entry);
 
-			while (toRet.EndsWith(Environment.NewLine)) {
+			while (toRet.EndsWith(Environment.NewLine))
 				toRet = toRet.Remove(toRet.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+
+			string reading = KoreanReading.Describe(entry.RelativePath);
+			string hex = KoreanReading.EncodedHex(entry.RelativePath);
+			if (!string.IsNullOrEmpty(reading) || !string.IsNullOrEmpty(hex)) {
+				var block = new StringBuilder();
+				if (!string.IsNullOrEmpty(reading))
+					block.Append(reading);
+				if (!string.IsNullOrEmpty(hex)) {
+					if (block.Length > 0)
+						block.AppendLine();
+					block.Append("Hex: ");
+					block.Append(hex);
+				}
+
+				string inserted = "FileEntry.PathReading = " + block.ToString().Replace("\r\n", "\n").Replace("\n", "\n  ");
+				string line = "RelativePath = " + entry.RelativePath;
+				int at = toRet.IndexOf(line, StringComparison.Ordinal);
+				if (at >= 0) {
+					int end = toRet.IndexOf('\n', at);
+					toRet = end < 0 ? toRet + Environment.NewLine + inserted : toRet.Insert(end + 1, inserted + Environment.NewLine);
+				}
+				else {
+					toRet = inserted + Environment.NewLine + toRet;
+				}
 			}
 
-			toRet += Environment.NewLine;
-			return toRet;
+			return toRet + Environment.NewLine;
 		}
 
 		public static string DisplayObjectPropertiesFromEntry(GrfHolder grf, string file) {
@@ -295,6 +316,9 @@ namespace GRF.FileFormats {
 			if (!IsEvaluated) {
 				Evaluate();
 			}
+
+			if (PropertyName == "PathReading" || PropertyName == "EnglishName" || PropertyName == "EnglishPath")
+				return;
 
 			b.Append(indent);
 
