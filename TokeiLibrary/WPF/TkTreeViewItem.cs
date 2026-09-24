@@ -49,13 +49,14 @@ namespace TokeiLibrary.WPF {
 				ttv.ReadingText = KoreanReading.Describe(ttv.HeaderText);
 
 				if (Configuration.TranslateTreeView) {
-					var translation = TkTreeViewItem._translations[EncodingService.ConvertStringToKorean(ttv.HeaderText)];
-
-					if (translation != null) {
-						translation = "  " + translation;
-					}
-
-					ttv.TranslatedText = translation;
+					string english = KoreanReading.English(ttv.HeaderText);
+					if (string.IsNullOrEmpty(english) || string.Equals(english, ttv.HeaderText, StringComparison.OrdinalIgnoreCase))
+						ttv.TranslatedText = null;
+					else
+						ttv.TranslatedText = "  " + english;
+				}
+				else {
+					ttv.TranslatedText = null;
 				}
 			}
 		}
