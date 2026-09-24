@@ -155,7 +155,7 @@
                     </Grid.ColumnDefinitions>
                     <!-- TreeView and ListView -->
                     <WPF:TkView Grid.Column="0" BorderThickness="0" Margin="0" Name="_treeView" Drop="_treeView_Drop" SelectedItemChanged="_treeView_SelectedItemChanged" KeyDown="_treeView_KeyDown" PreviewMouseRightButtonUp="_treeView_PreviewMouseRightButtonUp" PreviewMouseRightButtonDown="_treeView_PreviewMouseRightButtonDown" />
-                    <GridSplitter Width="2" Grid.Column="1" HorizontalAlignment="Left" Background="{x:Static TokeiLibrary:Configuration.UIGridBackground}" DragCompleted="_splitterFolders_DragCompleted" />
+                    <GridSplitter Width="2" Grid.Column="1" HorizontalAlignment="Left" Background="{x:Static TokeiLibrary:Configuration.UIGridBackground}" />
                     <Grid Grid.Column="2" Background="{DynamicResource ListItemSearchBackground}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto" />
