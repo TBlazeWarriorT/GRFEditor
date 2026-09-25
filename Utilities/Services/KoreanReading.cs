@@ -219,31 +219,30 @@ namespace Utilities.Services {
 					while (j < hangul.Length && !IsSyllable(hangul[j]))
 						j++;
 					string run = hangul.Substring(i, j - i).Trim();
-					if (run.Length > 0) {
-						if (sb.Length > 0)
-							sb.Append(' ');
-						sb.Append(run);
-					}
+					if (run.Length > 0)
+						AppendPiece(sb, run);
 					i = j;
 					continue;
 				}
 
 				string gloss;
 				int end = MatchWord(hangul, i, out gloss);
+				if (end == i && IsAlone(hangul, i) && _words.TryGetValue(hangul.Substring(i, 1), out gloss)) {
+					AppendPiece(sb, gloss);
+					i++;
+					continue;
+				}
+
 				if (end == i) {
 					int j = i + 1;
-					while (j < hangul.Length && IsSyllable(hangul[j]) && MatchWord(hangul, j, out gloss) == j)
+					while (j < hangul.Length && IsSyllable(hangul[j]) && MatchWord(hangul, j, out gloss) == j && !(IsAlone(hangul, j) && _words.ContainsKey(hangul.Substring(j, 1))))
 						j++;
-					if (sb.Length > 0)
-						sb.Append(' ');
-					sb.Append(RomanizeSpan(hangul, i, j));
+					AppendPiece(sb, RomanizeSpan(hangul, i, j));
 					i = j;
 					continue;
 				}
 
-				if (sb.Length > 0)
-					sb.Append(' ');
-				sb.Append(gloss);
+				AppendPiece(sb, gloss);
 				i = end;
 			}
 
@@ -277,6 +276,18 @@ namespace Utilities.Services {
 
 		private static bool IsSyllable(char c) {
 			return c >= 0xAC00 && c <= 0xD7A3;
+		}
+
+		private static bool IsAlone(string text, int i) {
+			return (i == 0 || !IsSyllable(text[i - 1])) && (i + 1 >= text.Length || !IsSyllable(text[i + 1]));
+		}
+
+		private static void AppendPiece(StringBuilder sb, string piece) {
+			if (piece.Length == 0)
+				return;
+			if (sb.Length > 0 && char.IsLetterOrDigit(sb[sb.Length - 1]) && char.IsLetterOrDigit(piece[0]))
+				sb.Append(' ');
+			sb.Append(piece);
 		}
 
 		private static bool ContainsHangulScript(string text) {
