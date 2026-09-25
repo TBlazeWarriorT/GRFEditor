@@ -439,6 +439,10 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 				textBlock.Add(new XAttribute("ToolTip", toolTip));
 			}
 
+			// A negative left margin is clipped away by WPF's layout clip once the text overflows the column.
+			if (column != null && !string.IsNullOrEmpty(column.BesideExpression))
+				textBlock.Find(a => a.Name == "Margin").Value = "0 0 -4 0";
+
 			XElement nameBlock = new XElement(ns + "TextBlock", textBlock);
 			XElement cell = nameBlock;
 			if (column != null && !string.IsNullOrEmpty(column.BesideExpression)) {
