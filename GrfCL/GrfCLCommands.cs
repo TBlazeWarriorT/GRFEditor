@@ -150,6 +150,9 @@ namespace GrfCL {
 			else if (clOption == CommandLineOptions.SpriteCatalog) {
 				_spriteCatalog(clOption.Args[0], clOption.Args.Count > 1 ? clOption.Args[1] : "", clOption.Args.Count > 2 ? clOption.Args[2] : "");
 			}
+			else if (clOption == CommandLineOptions.VerifySpriteUpgrades) {
+				_verifySpriteUpgrades(clOption.Args[0], clOption.Args[1]);
+			}
 			else if (clOption == CommandLineOptions.Find) {
 				List<string> found = _grf.FileTable.Files.Where(path => clOption.Args.All(query => _matchesReading(path, query))).ToList();
 				foreach (string path in found)

@@ -41,7 +41,7 @@ namespace GrfCL {
 			reader.BaseStream.Position += bytes;
 		}
 
-		private static void _catalogReadFrames(Act act, byte[] data, int count) {
+		private static void _catalogReadFrames(Act act, byte[] data, int count, bool full = false, Dictionary<Frame, string> preciseOffsets = null) {
 			using (var reader = new BinaryReader(new MemoryStream(data))) {
 				if (reader.ReadUInt16() != 0x4341) throw new InvalidDataException("Invalid ACT header.");
 				reader.BaseStream.Position = 16;
@@ -55,11 +55,12 @@ namespace GrfCL {
 						int layers = reader.ReadInt32();
 						if (layers < 0 || layers > (data.Length - reader.BaseStream.Position) / 16)
 							throw new InvalidDataException("Invalid ACT layer count.");
-						var frame = new Frame(); action.Frames.Add(frame);
+						var frame = new Frame(); action.Frames.Add(frame); var offsets = new StringBuilder();
 						for (int l = 0; l < layers; l++) {
 							var layer = new Layer(SpriteIndex.Null);
-							layer.OffsetX = act.Version >= 2.6 ? (int)Math.Floor(reader.ReadSingle()) : reader.ReadInt32();
-							layer.OffsetY = act.Version >= 2.6 ? (int)Math.Floor(reader.ReadSingle()) : reader.ReadInt32();
+							double x = act.Version >= 2.6 ? (double)reader.ReadSingle() : reader.ReadInt32();
+							double y = act.Version >= 2.6 ? (double)reader.ReadSingle() : reader.ReadInt32();
+							layer.OffsetX = (int)Math.Floor(x); layer.OffsetY = (int)Math.Floor(y);
 							layer.SpriteIndex = reader.ReadInt32(); layer.Mirror = reader.ReadInt32() != 0;
 							if (act.Version >= 2.0) {
 								layer.Color.R = reader.ReadByte(); layer.Color.G = reader.ReadByte();
@@ -69,16 +70,34 @@ namespace GrfCL {
 								if (act.Version >= 2.5) _catalogSkip(reader, 8);
 								if (act.Version >= 2.6 && act.Sprite.Header.IsCompatibleWith(3, 2)) layer.SpriteType = SpriteTypes.Bgra32;
 							}
-							if (layer.SpriteIndex >= 0 && layer.Color.A > 0 && layer.ScaleX != 0 && layer.ScaleY != 0)
+							if (layer.SpriteIndex >= 0 && layer.Color.A > 0 && layer.ScaleX != 0 && layer.ScaleY != 0) {
 								frame.Layers.Add(layer);
+								if (full && (Double.IsNaN(x) || Double.IsInfinity(x) || Double.IsNaN(y) || Double.IsInfinity(y) || Single.IsNaN(layer.ScaleX) || Single.IsInfinity(layer.ScaleX) || Single.IsNaN(layer.ScaleY) || Single.IsInfinity(layer.ScaleY))) throw new InvalidDataException("Invalid ACT layer transform.");
+								if (full) offsets.Append(x.ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(',').Append(y.ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(';');
+							}
 						}
-						if (act.Version >= 2.0) _catalogSkip(reader, 4);
+						if (act.Version >= 2.0) frame.SoundId = reader.ReadInt32();
 						if (act.Version >= 2.3) {
 							int anchors = reader.ReadInt32();
-							_catalogSkip(reader, (long)anchors * 16);
+							if (!full) _catalogSkip(reader, (long)anchors * 16);
+							else {
+								if (anchors < 0 || anchors > (data.Length - reader.BaseStream.Position) / 16) throw new InvalidDataException("Invalid ACT anchor count.");
+								for (int anchor = 0; anchor < anchors; anchor++) frame.Anchors.Add(new Anchor(reader.ReadBytes(4), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()));
+							}
 						}
+						if (full) preciseOffsets.Add(frame, offsets.ToString());
 					}
 				}
+				if (full && act.Version >= 2.1) {
+					int sounds = reader.ReadInt32();
+					if (sounds < 0 || sounds > (data.Length - reader.BaseStream.Position) / 40) throw new InvalidDataException("Invalid ACT sound count.");
+					for (int sound = 0; sound < sounds; sound++) act.SoundFiles.Add(EncodingService.DisplayEncoding.GetString(reader.ReadBytes(40)).Split('\0')[0]);
+					if (act.Version >= 2.2) foreach (var action in act.Actions) {
+						action.AnimationSpeed = reader.ReadSingle();
+						if (Single.IsNaN(action.AnimationSpeed) || Single.IsInfinity(action.AnimationSpeed) || action.AnimationSpeed < 0) throw new InvalidDataException("Invalid ACT animation delay.");
+					}
+				}
+				if (full && reader.BaseStream.Position != data.Length) throw new InvalidDataException("Unexpected trailing ACT data; exact verification refused.");
 			}
 		}
 
@@ -180,7 +199,16 @@ namespace GrfCL {
 			// Read the existing literal table, never execute arbitrary JavaScript.
 			foreach (Match match in Regex.Matches(text, @"^\s*(\d+)\s*:\s*'((?:[^'\\]|\\.)*)'\s*,?", RegexOptions.Multiline)) {
 				int id = Int32.Parse(match.Groups[1].Value);
-				string name = Regex.Replace(match.Groups[2].Value, @"\\(.)", "$1");
+				string name = Regex.Replace(match.Groups[2].Value, @"\\(?:x([0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|(.))", escape => {
+					if (escape.Groups[1].Success) return ((char)Convert.ToInt32(escape.Groups[1].Value, 16)).ToString();
+					if (escape.Groups[2].Success) return ((char)Convert.ToInt32(escape.Groups[2].Value, 16)).ToString();
+					switch (escape.Groups[3].Value) {
+						case "n": return "\n";
+						case "r": return "\r";
+						case "t": return "\t";
+						default: return escape.Groups[3].Value;
+					}
+				});
 				var names = new List<string> { name };
 				// The client's table retains CP949 filename bytes as Latin-1 characters.
 				if (name.All(c => c <= 255)) names.Add(EncodingService.DisplayEncoding.GetString(Encoding.GetEncoding(28591).GetBytes(name)));
@@ -208,7 +236,7 @@ namespace GrfCL {
 
 		private static void _spriteCatalog(string output, string folder, string table) {
 			string directory = System.IO.Path.GetFullPath(output);
-			string[] names = { "sprites.csv", "npcs.csv", "idle-groups.csv", "walk-upgrades.csv" };
+			string[] names = { "sprites.csv", "npcs.csv", "idle-groups.csv", "walk-upgrades.csv", "verified-upgrades.csv" };
 			foreach (string name in names) if (File.Exists(System.IO.Path.Combine(directory, name)))
 				throw new IOException("Catalog already exists: " + name + ". Choose a new output folder.");
 			var ids = _catalogIds(table);
@@ -226,6 +254,7 @@ namespace GrfCL {
 				else try {
 					byte[] data = _grf.FileTable[path].GetDecompressedData();
 					if (data.Length < 16) throw new InvalidDataException("Truncated ACT header.");
+					new ActHeader(new GRF.IO.ByteReader(data));
 					row.Actions = BitConverter.ToUInt16(data, 4);
 					if (row.Kind == "other") {
 						// Equipment and effects only participate in idle grouping, not the NPC walk catalog.
@@ -284,6 +313,7 @@ namespace GrfCL {
 						writer.WriteLine(_catalogCsv(String.Join(";", source.Ids), source.Path, source.Walk, String.Join(";", candidate.Ids), candidate.Path, candidate.Actions, candidate.Walk, "first-idle-frame"));
 					}
 			}
+			_verifySpriteUpgrades(System.IO.Path.Combine(directory, "walk-upgrades.csv"), System.IO.Path.Combine(directory, "verified-upgrades.csv"));
 			CLHelper.Log = String.Format("Catalog: {0} ACTs, {1} NPCs ({2} animated walk), {3} identical-idle groups, {4} walk-upgrade candidates, {5} errors; {6:0.00}s. Output: {7}", rows.Count, rows.Count(r => r.Kind == "npc"), rows.Count(r => r.Kind == "npc" && r.HasWalk), duplicateGroups, upgrades, failures, timer.Elapsed.TotalSeconds, directory);
 		}
 	}

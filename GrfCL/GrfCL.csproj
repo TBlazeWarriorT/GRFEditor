@@ -79,6 +79,7 @@
     <Compile Include="GrfCLCommands.cs" />
     <Compile Include="FindSameIdle.cs" />
     <Compile Include="SpriteCatalog.cs" />
+    <Compile Include="VerifySpriteUpgrades.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

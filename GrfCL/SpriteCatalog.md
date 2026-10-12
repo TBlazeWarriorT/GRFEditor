@@ -23,7 +23,7 @@ Without the table, the catalogs work normally with empty ID fields.
 
 ## Output
 
-The command writes four UTF-8 CSVs with BOM, quoted fields and a header:
+The command writes five UTF-8 CSVs with BOM, quoted fields and a header:
 
 | File | Contents |
 | --- | --- |
@@ -31,6 +31,7 @@ The command writes four UTF-8 CSVs with BOM, quoted fields and a header:
 | `npcs.csv` | ACTs in an `npc` folder, with walking classification, mapped IDs and walking candidates in the same row. |
 | `idle-groups.csv` | Groups of two or more files with the same first idle frame, including equipment and effects. |
 | `walk-upgrades.csv` | NPCs without full animated walking, paired with NPC/monster candidates having the same first idle frame and animated walking in all eight directions. |
+| `verified-upgrades.csv` | Full verification of those candidate pairs, classifications and detailed differences. |
 
 Existing catalog files are not overwritten. Choose a new output folder for each
 scan. Progress is printed approximately every five seconds, followed by counts
@@ -72,15 +73,84 @@ transforms, color masks, image dimensions and decoded pixels. Image/palette indi
 and transparent RGB do not change the match. Different layer constructions with
 the same flattened appearance are outside this exact-match search.
 
-A walking candidate is a first-frame match, not a validated automatic replacement.
-The catalog does not compare every idle direction or the remaining action groups.
-It does not change the client's sprite mapping.
+The lookup candidate is a first-frame match; the verified catalog classifies its full animation compatibility.
+The lookup CSV remains separate from the full verification results.
+Neither command changes the client's sprite mapping.
 
 Decoded sprites and per-image hashes are released after each asset. Only row
 metadata and signatures remain for grouping/export. Equipment/effects use the
 existing first-image SPR decoder when their first frame references image 0 only;
 otherwise their SPR is decoded normally. NPCs/monsters inspect the idle and walk
 groups; later action groups are not parsed.
+
+## Full upgrade verification
+
+The batch automatically verifies its candidate pairs after writing the four lookup
+CSVs. Only the candidate assets are fully read. You can verify an existing catalog
+without scanning the GRF again:
+
+```text
+GrfCL.exe -open "C:\RO\data.grf" -verifySpriteUpgrades "C:\RO\catalog\walk-upgrades.csv" "C:\RO\verified-upgrades.csv"
+```
+
+Read every ACT action and frame in each source/candidate pair. Compare the eight
+idle directions, then all original actions at the same indices. Compare decoded
+image content, layer order/count, transforms, colors, exact positions (including
+fractional ACT 2.6 offsets), frame counts/order, action delays, anchors (including
+auxiliary fields), and sound events. Resolve sound indices to their filenames, so
+reordering a sound table does not produce a difference. Image/palette reindexing
+also remains equivalent. SPR images unused by any frame, ACT reserved bytes and
+invisible-layer data do not affect the comparison.
+
+Walking is rechecked from the current candidate assets rather than trusting the
+CSV's flags. All eight directions must be independently animated, with positive
+delays. The source must lack that full walking capability.
+
+| `classification` | Meaning |
+| --- | --- |
+| `direct-upgrade` | All eight complete idle directions and every original action are preserved, and the candidate adds full animated walking. |
+| `identical-idle` | Complete idle is identical, but another original action differs or walking is not gained. |
+| `first-frame-only` | First idle frame matches, but complete idle differs. |
+| `no-match` | First idle frame no longer matches, or is empty. |
+| `error` | A missing/malformed asset or incomplete data prevents exact verification. Equality fields remain blank. |
+
+All original action indices must be preserved. Replacing an existing static or
+copied walk group with animated walking therefore remains a manual-review case,
+even when the idle is identical. Originals containing only the idle group can
+become direct upgrades by preserving that group and adding walking.
+
+The output retains the input columns and adds:
+
+- `idle_equal`: every idle frame, delay, anchor and sound event agrees.
+- `idle_visual_equal`: exact idle frame count/order, drawings and positions agree;
+  timing, anchors and sound events may differ.
+- `idle_cycle_equal`: the visual idle cycle agrees after collapsing repeated poses,
+  repeated loops and starting phase. It ignores timing, anchors and sounds, and
+  never relaxes automatic certification.
+- `original_actions_equal`, current source/candidate walking and `walk_gained`.
+- First difference's action/frame, reason, and source/candidate values.
+- All difference categories for the idle and for the original actions, plus
+  `difference_details` containing a line for every discrepancy in paired frames.
+  Unequal frame counts are reported separately; extra unpaired frames are covered
+  by that count difference. Action and frame indices are zero-based.
+- `verification_error` for assets that could not be verified.
+
+Drawing/transform differences are diagnosed separately from position-only changes.
+The frame comparisons remain exact: no fuzzy image threshold or timing tolerance.
+The CSV reader supports quoted fields, escaped quotes, multiline fields and BOM.
+Existing verification output is never overwritten.
+
+Each distinct asset is decoded once per verification run; only fingerprints and
+metadata remain cached. On the development GRF, 77 pairs involved 126 assets:
+verification took approximately 2-3.5 seconds, yielding 50 direct-upgrade pairs
+for 36 NPCs and 27 manual-review pairs. Emily passed the complete comparison.
+A combined scan and verification run took 45.76 seconds; timings vary with I/O.
+
+Synthetic fixtures verified full preservation, later-frame/direction changes,
+delays, anchors, sound changes and sound-table reindexing, image reindexing,
+fractional positions, changed non-idle actions, stale first-frame matches,
+malformed/missing assets and truncated delay tables, quoted multiline CSV fields
+and refusal to overwrite existing reports.
 
 ## Quick consultation in PowerShell
 
@@ -105,7 +175,7 @@ Query `sprites.csv` instead to include monsters usable as NPCs. Use
 
 ## Validation
 
-On the development machine, a full kRO `data.grf` scan completed in 40.73 seconds:
+On the development machine, a full kRO `data.grf` scan completed in 39.37 seconds:
 82,272 ACTs, 53,167 ACT/SPR pairs, 29,105 missing SPR companions, 6,587 empty
 idles, 6,959 duplicate-idle groups and no parsing errors in the inspected data.
 Among 1,375 NPC assets, 186 had independently animated walking in all eight
@@ -115,7 +185,8 @@ Emily (`671`, `4_geffen_03`) matched `geffen_mage_3_1`, annotated with IDs
 
 Synthetic fixtures verified animated/static/partial/empty walking, copied idle
 cycles with a changed starting phase, missing/broken files, invalid image references,
-image and palette reindexing, different pixels, ID aliases, folder filtering and
+image and palette reindexing, different pixels, ID aliases and hex/Unicode escapes,
+folder filtering and
 refusal to overwrite an existing catalog.
 
 Build: `GrfCL/bin/Release/`. Copy the executable together with that build's DLLs
