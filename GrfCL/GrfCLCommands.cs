@@ -144,6 +144,12 @@ namespace GrfCL {
 				Console.WriteLine(FileFormatParser.DisplayObjectProperties(_grf));
 				CLHelper.Log = "Object properties have been displayed";
 			}
+			else if (clOption == CommandLineOptions.FindSameIdle) {
+				_findSameIdle(clOption.Args[0], clOption.Args.Count > 1 ? clOption.Args[1] : "");
+			}
+			else if (clOption == CommandLineOptions.SpriteCatalog) {
+				_spriteCatalog(clOption.Args[0], clOption.Args.Count > 1 ? clOption.Args[1] : "", clOption.Args.Count > 2 ? clOption.Args[2] : "");
+			}
 			else if (clOption == CommandLineOptions.Find) {
 				List<string> found = _grf.FileTable.Files.Where(path => clOption.Args.All(query => _matchesReading(path, query))).ToList();
 				foreach (string path in found)

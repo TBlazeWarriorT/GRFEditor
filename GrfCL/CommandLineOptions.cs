@@ -37,6 +37,22 @@ namespace GrfCL {
 			0, 0, false
 		);
 
+		// Sprite lookup (read-only)
+		public static readonly CommandLineOptions FindSameIdle = new CommandLineOptions(
+			"findSameIdle", "Finds ACT/SPR pairs with the same first idle frame in the opened GRF.",
+			1, 2, true,
+			"Target .act or .spr: a path inside the GRF or a local file with its companion.",
+			"Optional GRF folder to search (default: the whole GRF)."
+		);
+
+		public static readonly CommandLineOptions SpriteCatalog = new CommandLineOptions(
+			"spriteCatalog", "Exports first-idle groups, NPC walk capability and walk-upgrade candidates.",
+			1, 3, true,
+			"Output folder for CSV catalogs (existing catalogs are not overwritten).",
+			"Optional GRF folder to scan (default: the whole GRF; use an empty string for all).",
+			"Optional client MonsterTable.js to annotate sprite IDs."
+		);
+
 		// Global options
 		public static readonly CommandLineOptions Compression = new CommandLineOptions(
 			"compression,c", "Changes the compression level of the GRF for the repacking procedures.",

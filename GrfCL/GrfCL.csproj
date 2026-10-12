@@ -77,6 +77,8 @@
     <Compile Include="Crc32QuickHash.cs" />
     <Compile Include="GrfCL.cs" />
     <Compile Include="GrfCLCommands.cs" />
+    <Compile Include="FindSameIdle.cs" />
+    <Compile Include="SpriteCatalog.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
