@@ -26,6 +26,11 @@ namespace GRFEditor.WPF.PreviewTabs {
 		private readonly object _lockAnimation = new object();
 		private int _frameIndex;
 		private float _animationSpeed = 30f;
+		// The frame shown comes from the time played, at the file's fps: a sleep that overruns skips
+		// frames instead of slowing the animation down. Restarted from _clockFrame on each play.
+		private readonly Stopwatch _clock = new Stopwatch();
+		private int _clockFrame;
+		private float _fps = 30f;
 
 		private bool _enableAnimationThread {
 			set {
@@ -152,6 +157,7 @@ namespace GRFEditor.WPF.PreviewTabs {
 			if (_isCancelRequired()) return;
 
 			_animationSpeed = _str.Fps;
+			_fps = _str.Fps > 0 ? _str.Fps : 1;
 
 			if (_animationSpeed != 0) {
 				_animationSpeed = 1000 / _animationSpeed;
@@ -176,46 +182,13 @@ namespace GRFEditor.WPF.PreviewTabs {
 					_watch.Start();
 
 					lock (_lockAnimation) {
-						_frameIndex++;
+						int frame = (_clockFrame + (int)(_clock.Elapsed.TotalSeconds * _fps)) % _str.KeyFrameCount;
 
-						if (_frameIndex >= _str.KeyFrameCount) {
-							_frameIndex = 0;
+						// Woke before the next frame is due (a low fps): nothing new to draw
+						if (frame != _frameIndex) {
+							_frameIndex = frame;
+							_showFrame();
 						}
-
-						Stopwatch watch = new Stopwatch();
-
-						_sliderPosition.Dispatch(delegate {
-							try {
-								if (_frameIndex > _str.MaxKeyFrame) {
-									return;
-								}
-
-								_sliderAnimation.SetPosition((float)_frameIndex / Math.Max(_str.MaxKeyFrame, 1), true);
-								_sliderPosition.Content = "Frame: " + _frameIndex + " / " + _str.MaxKeyFrame;
-							}
-							catch {
-								_enableAnimationThread = false;
-							}
-						});
-
-						this.Dispatch(delegate {
-							try {
-								watch.Reset();
-								watch.Start();
-								_viewport.FrameIndex = _frameIndex;
-								_viewport.Update();
-								watch.Stop();
-
-								if (!IsVisible)
-									_enableAnimationThread = false;
-							}
-							catch (Exception err) {
-								ErrorHandler.HandleException(err);
-								_enableAnimationThread = false;
-							}
-						});
-
-						//Console.WriteLine("Time spent (" + _frameIndex + "): " + watch.ElapsedMilliseconds);
 					}
 
 					_watch.Stop();
@@ -243,8 +216,42 @@ namespace GRFEditor.WPF.PreviewTabs {
 
 					if (!_threadIsEnabled)
 						_threadIsEnabled = true;
+
+					// Plays on from the frame it stopped on, or was dragged to
+					_clockFrame = _frameIndex;
+					_clock.Restart();
 				}
 			}
+		}
+
+		private void _showFrame() {
+			_sliderPosition.Dispatch(delegate {
+				try {
+					if (_frameIndex > _str.MaxKeyFrame) {
+						return;
+					}
+
+					_sliderAnimation.SetPosition((float)_frameIndex / Math.Max(_str.MaxKeyFrame, 1), true);
+					_sliderPosition.Content = "Frame: " + _frameIndex + " / " + _str.MaxKeyFrame;
+				}
+				catch {
+					_enableAnimationThread = false;
+				}
+			});
+
+			this.Dispatch(delegate {
+				try {
+					_viewport.FrameIndex = _frameIndex;
+					_viewport.Update();
+
+					if (!IsVisible)
+						_enableAnimationThread = false;
+				}
+				catch (Exception err) {
+					ErrorHandler.HandleException(err);
+					_enableAnimationThread = false;
+				}
+			});
 		}
 
 		private void _playAnimation_Click(object sender, RoutedEventArgs e) {
