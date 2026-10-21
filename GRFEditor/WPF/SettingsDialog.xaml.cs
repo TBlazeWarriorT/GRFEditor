@@ -276,9 +276,11 @@ namespace GRFEditor.WPF {
 		private void _cbExtensions_Click(object sender, RoutedEventArgs e) {
 			try {
 				if (GrfEditorConfiguration.GrfFilesAssociated) {
-					FileAssociationHelper.Register(".grf", "Gravity Archive File", Methods.ApplicationFullPath);
-					FileAssociationHelper.Register(".gpf", "Gravity Patch File", Methods.ApplicationFullPath);
-					FileAssociationHelper.Register(".rgz", "Gravity Patch GZip File", Methods.ApplicationFullPath);
+					// Archives show GRF Editor's own icon, as the official installer leaves them
+					string exeIcon = FileAssociationHelper.ExeIcon(Methods.ApplicationFullPath);
+					FileAssociationHelper.Register(".grf", "Gravity Archive File", Methods.ApplicationFullPath, exeIcon);
+					FileAssociationHelper.Register(".gpf", "Gravity Patch File", Methods.ApplicationFullPath, exeIcon);
+					FileAssociationHelper.Register(".rgz", "Gravity Patch GZip File", Methods.ApplicationFullPath, exeIcon);
 					FileAssociationHelper.Register(".grfkey", "GRF Editor Encryption Key File", Methods.ApplicationFullPath, iconPath: null, openWithEditor: false);
 				}
 				else {

@@ -199,16 +199,19 @@ namespace GRFEditor.ApplicationConfiguration {
 				catch {
 				}
 
+				// Archives show GRF Editor's own icon, as the official installer leaves them
+				string exeIcon = FileAssociationHelper.ExeIcon(Methods.ApplicationFullPath);
+
 				if (GrfEditorConfiguration.FileShellAssociated.HasFlags(FileAssociation.Grf)) {
-					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "GRF", ".grf", true);
+					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "GRF", ".grf", true, exeIcon);
 				}
 
 				if (GrfEditorConfiguration.FileShellAssociated.HasFlags(FileAssociation.Gpf)) {
-					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "GPF", ".gpf", true);
+					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "GPF", ".gpf", true, exeIcon);
 				}
 
 				if (GrfEditorConfiguration.FileShellAssociated.HasFlags(FileAssociation.Grf)) {
-					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "RGZ", ".rgz", true);
+					ApplicationManager.AddExtension(Methods.ApplicationFullPath, "RGZ", ".rgz", true, exeIcon);
 				}
 
 				if (GrfEditorConfiguration.FileShellAssociated.HasFlags(FileAssociation.GrfKey)) {

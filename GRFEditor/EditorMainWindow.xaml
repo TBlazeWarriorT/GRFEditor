@@ -6,7 +6,7 @@
         xmlns:WPF="clr-namespace:TokeiLibrary.WPF;assembly=TokeiLibrary"
         xmlns:ListView="clr-namespace:TokeiLibrary.WPF.Styles.ListView;assembly=TokeiLibrary"
         xmlns:WpfBugFix="clr-namespace:TokeiLibrary.WpfBugFix;assembly=TokeiLibrary"
-		Title="GRF Editor" Height="549" Width="730" Icon="Resources\internalapp.png" MinWidth="680" SnapsToDevicePixels="True" UseLayoutRounding="True">
+		Title="GRF Editor" Height="549" Width="730" Icon="Resources\app.ico" MinWidth="680" SnapsToDevicePixels="True" UseLayoutRounding="True">
     <Window.Resources>
         <Style TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />

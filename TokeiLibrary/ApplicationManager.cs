@@ -518,7 +518,7 @@ namespace TokeiLibrary {
 				RegistryKey app = Registry.CurrentUser.CreateSubKey("Software\\Classes\\Applications\\" + programId);
 				RegistryKey link = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\" + extension);
 
-				file.CreateSubKey("DefaultIcon").SetValue("", Path.Combine(Configuration.ProgramDataPath, extension.Substring(1, extension.Length - 1)) + ".ico");
+				file.CreateSubKey("DefaultIcon").SetValue("", iconPath ?? Path.Combine(Configuration.ProgramDataPath, extension.Substring(1, extension.Length - 1)) + ".ico");
 				file.CreateSubKey("PerceivedType").SetValue("", fileName);
 
 				if (openWithGrfEditor) {
