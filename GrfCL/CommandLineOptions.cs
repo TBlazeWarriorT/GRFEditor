@@ -85,6 +85,12 @@ namespace GrfCL {
 			0, 1, true,
 			"Save path of the GRF (using the same filename as the opened GRF will overwrite it)."
 		);
+		public static readonly CommandLineOptions Compact = new CommandLineOptions(
+			"compact,redirect", "Saves an opened GRF with identical entries redirected to one copy of their data " +
+			                    "(GRF Editor's Save > Redirect indexes). The GRF must have no unsaved changes.",
+			0, 1, true,
+			"Save path of the GRF (overwrites the opened GRF if omitted)."
+		);
 		public static readonly CommandLineOptions Options = new CommandLineOptions(
 			"options", "Adds a property or an option to a GRF/Thor container.",
 			0, 2, true,

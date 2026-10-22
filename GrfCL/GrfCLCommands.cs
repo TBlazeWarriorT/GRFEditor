@@ -192,6 +192,25 @@ namespace GrfCL {
 					CLHelper.Log = "Save failed";
 				}
 			}
+			else if (clOption == CommandLineOptions.Compact) {
+				string targetFileName = clOption.Args.Count == 1 ? clOption.Args[0] : null;
+				GrfPath.CreateDirectoryFromFile(targetFileName);
+
+				// The library only compacts synchronously: run it aside so the progress can be shown
+				Thread compact = new Thread(() => _grf.CompactAs(targetFileName));
+				compact.Start();
+				while (!_grf.IsBusy && compact.IsAlive)
+					Thread.Sleep(10);
+				_showProgress(_grf);
+				compact.Join();
+
+				if (_grf.ProcessSaveResult()) {
+					CLHelper.Log = "Compacted the GRF to " + _grf.FileName;
+				}
+				else {
+					CLHelper.Log = "Compact failed";
+				}
+			}
 			else if (clOption == CommandLineOptions.Options) {
 				if (clOption.Option.OptionalArgs[clOption.FullOptionIds[0]] != null) {
 					_grf.Header.ThorSettings.UseGrfMerging = Boolean.Parse(clOption.Option.OptionalArgs[clOption.FullOptionIds[0]]);
